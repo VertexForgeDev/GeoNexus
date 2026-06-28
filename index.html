@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>GeoNexus</title>
+    <link rel="icon" type="image/x-icon" href="https://cdn-icons-png.flaticon.com/512/854/854894.png">
+    
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.css" />
+    
+    <style>
+        body, html { margin: 0; padding: 0; height: 100%; font-family: sans-serif; overflow: hidden; }
+        #app-container { display: flex; flex-direction: column; height: 100vh; }
+        .header { background: #333; color: white; padding: 10px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+        #map { flex-grow: 1; width: 100%; }
+        input { padding: 8px; border-radius: 4px; border: none; width: 200px; }
+        button { padding: 8px 15px; cursor: pointer; background: #007bff; color: white; border: none; border-radius: 4px; }
+    </style>
+</head>
+<body>
+
+    <div id="app-container">
+        <div class="header">
+            <strong>GeoNexus</strong>
+            <input type="text" id="origin" placeholder="Origin">
+            <input type="text" id="destination" placeholder="Destination">
+            <button onclick="calculateRoute()">Get Route</button>
+        </div>
+        <div id="map"></div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.js"></script>
+    
+    <script>
+        const map = L.map('map').setView([20, 0], 2);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors'
+        }).addTo(map);
+
+        let routingControl;
+
+        // Helper to geocode a string to coordinates using Nominatim
+        async function getCoords(query) {
+            const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}`);
+            const data = await res.json();
+            if (data.length === 0) throw new Error("Could not find: " + query);
+            return [parseFloat(data[0].lat), parseFloat(data[0].lon)];
+        }
+
+        async function calculateRoute() {
+            const origin = document.getElementById('origin').value;
+            const dest = document.getElementById('destination').value;
+
+            if (!origin || !dest) return alert("Please enter both locations");
+
+            try {
+                const startCoords = await getCoords(origin);
+                const endCoords = await getCoords(dest);
+
+                if (routingControl) map.removeControl(routingControl);
+
+                routingControl = L.Routing.control({
+                    waypoints: [
+                        L.latLng(startCoords[0], startCoords[1]),
+                        L.latLng(endCoords[0], endCoords[1])
+                    ],
+                    routeWhileDragging: true
+                }).addTo(map);
+
+            } catch (err) {
+                alert(err.message);
+            }
+        }
+    </script>
+</body>
+</html>
